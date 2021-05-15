@@ -26,6 +26,7 @@ bool vehicle_speed_found = false, verbose = true, doors_locked = false;
 
 int counter = 0, speed = 0;
 int seconds_above_limit = 0;
+int requests_sent = 0, replies_received = 0;
   
 MCP2515 mcp2515(10);
 
@@ -44,10 +45,9 @@ void setup() {
 }
 
 void loop() {
-  //Sleep for 1000ms between each request to the CEM. 1000m is more than enough, setting it lower can interfere with the CAN bus.
+  requests_sent = 0;
+  replies_received = 0;
   delay(TICK_PERIOD);
-
-  //Reset this flag before receiving replies
   vehicle_speed_found = false;
   counter = 0;
   
@@ -55,12 +55,12 @@ void loop() {
   GetDoorsStatus();
   GetVehicleSpeed();
 
-
-  //Monitor the bus for any responses linked to the previous request. Keep listening for 10.000 messages (which is around 2 minutes).
+  //Monitor the bus for any responses linked to the previous request. Keep listening for 500 messages (which is around 2 minutes).
   //if a message containing the vehicle speed is detected the loop is breaked.
   do{
     if (mcp2515.readMessage(&canMsg) == MCP2515::ERROR_OK) {
-    if(canMsg.can_id == /*0x812177FC*/ 0x80c00003 && canMsg.data[3] == 0x4a){
+    if(canMsg.can_id == 0x80c00003 && canMsg.data[3] == 0x4a){
+      replies_received++;
       speed = canMsg.data[7]/4;
       if(verbose){
         Serial.print("Speed: ");
@@ -86,6 +86,7 @@ void loop() {
     }
 
     else if(canMsg.can_id == 0x80c00003 && canMsg.data[3] == 0x6a){
+      replies_received++;
       /*Serial.print(canMsg.can_id, HEX);
       Serial.print(",");
       Serial.print(canMsg.can_dlc, HEX);
@@ -109,12 +110,13 @@ void loop() {
         Serial.println(")");
       }
     }
-    counter++;
   }
- }while(!vehicle_speed_found && counter < 500);
+  counter++;
+ }while((replies_received < requests_sent) && counter < 500);
 }
 
 void GetVehicleSpeed(){
+  requests_sent++;
   get_vehicle_speed.can_id = 0x0800ffffe; //Try this without leading 0 as well
   get_vehicle_speed.can_dlc = 8;
   get_vehicle_speed.data[0] = 0xcd;
@@ -129,6 +131,7 @@ void GetVehicleSpeed(){
 }
 
 void GetDoorsStatus(){
+  requests_sent++;
   doors_status.can_id = 0x0800ffffe;
   doors_status.can_dlc = 8;
   doors_status.data[0] = 0xcd;
