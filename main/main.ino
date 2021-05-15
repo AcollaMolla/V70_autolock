@@ -38,7 +38,7 @@ void setup() {
   mcp2515.setBitrate(CAN_125KBPS, MCP_8MHZ);
   mcp2515.setNormalMode();
   //mcp2515.setFilterMask(MCP2515::MASK0, true, 0x1FFFFFFF);
-  //mcp2515.setFilter(MCP2515::RXF0, true, 0x81c01022);
+  //mcp2515.setFilter(MCP2515::RXF0, true, 0x80c00003);
   
   Serial.println("------- CAN Read ----------");
   Serial.println("ID  DLC   DATA");
